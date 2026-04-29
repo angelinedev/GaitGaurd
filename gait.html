@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GaitGuard CoP Visualizer</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; }
+        #container { position: relative; width: 350px; height: 550px; background: white; border: 5px solid #ccc; border-radius: 20px; margin-top: 20px; transition: border-color 0.2s; }
+        .out-of-bounds { border-color: #ff4d4d !important; box-shadow: 0 0 20px rgba(255, 77, 77, 0.5); }
+        svg { width: 100%; height: 100%; }
+        .controls { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .sensor { stroke: #333; stroke-width: 2; transition: r 0.1s; }
+        #cop-marker { fill: #007bff; stroke: white; stroke-width: 3; }
+        .safe-zone { fill: rgba(0, 255, 0, 0.1); stroke: green; stroke-dasharray: 5; }
+    </style>
+</head>
+<body>
+
+    <h2>GaitGuard: Center of Pressure Engine</h2>
+
+    <div id="container">
+        <svg viewBox="0 0 300 500">
+            <path d="M150,480 Q50,450 50,300 Q50,50 150,20 Q250,50 250,300 Q250,450 150,480" fill="#eee" stroke="#bbb" />
+           
+            <rect class="safe-zone" x="100" y="150" width="100" height="200" />
+
+            <circle id="vis-heel" class="sensor" cx="150" cy="430" r="10" fill="#ffcc00" />
+            <circle id="vis-bigtoe" class="sensor" cx="210" cy="70" r="10" fill="#ffcc00" />
+            <circle id="vis-smalltoe" class="sensor" cx="90" cy="90" r="10" fill="#ffcc00" />
+            <circle id="vis-arch" class="sensor" cx="100" cy="250" r="10" fill="#ffcc00" />
+
+            <circle id="cop-marker" cx="150" cy="250" r="12" />
+        </svg>
+    </div>
+
+    <div class="controls">
+        <div><label>Heel (A0):</label><input type="range" id="f1" value="50"></div>
+        <div><label>Big Toe (A1):</label><input type="range" id="f2" value="20"></div>
+        <div><label>Small Toe (A2):</label><input type="range" id="f3" value="20"></div>
+        <div><label>Arch (A3):</label><input type="range" id="f4" value="10"></div>
+    </div>
+
+    <script>
+        // Coordinates of sensors (matches SVG cx/cy)
+        const sensors = [
+            { x: 150, y: 430, id: 'vis-heel' },
+            { x: 210, y: 70,  id: 'vis-bigtoe' },
+            { x: 90,  y: 90,  id: 'vis-smalltoe' },
+            { x: 100, y: 250, id: 'vis-arch' }
+        ];
+
+        const sliders = [document.getElementById('f1'), document.getElementById('f2'), document.getElementById('f3'), document.getElementById('f4')];
+        const cop = document.getElementById('cop-marker');
+        const container = document.getElementById('container');
+
+        function update() {
+            let totalF = 0;
+            let sumX = 0;
+            let sumY = 0;
+
+            sliders.forEach((slider, i) => {
+                let force = parseFloat(slider.value);
+                totalF += force;
+                sumX += force * sensors[i].x;
+                sumY += force * sensors[i].y;
+               
+                // Visual feedback for sensor pressure
+                document.getElementById(sensors[i].id).setAttribute('r', 10 + (force / 5));
+            });
+
+            if (totalF > 0) {
+                let finalX = sumX / totalF;
+                let finalY = sumY / totalF;
+
+                cop.setAttribute('cx', finalX);
+                cop.setAttribute('cy', finalY);
+
+                // Check if Out of Safe Zone (Bounds: X 100-200, Y 150-350)
+                if (finalX < 100 || finalX > 200 || finalY < 150 || finalY > 350) {
+                    container.classList.add('out-of-bounds');
+                } else {
+                    container.classList.remove('out-of-bounds');
+                }
+            }
+        }
+
+        sliders.forEach(s => s.addEventListener('input', update));
+        update();
+    </script>
+</body>
+</html>
